@@ -1,0 +1,6 @@
+iflow2api_sdk/__pycache__/
+reference
+test
+iflow2api_sdk/api/__pycache__/
+iflow2api_sdk/models/__pycache__/
+tests/
