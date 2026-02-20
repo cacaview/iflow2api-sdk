@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.get-version.outputs.version }}
+      version-matched: ${{ steps.validate-version.outputs.matched }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,16 +32,23 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Package version: $VERSION"
 
-      - name: Validate version matches tag (for tag pushes)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Validate version matches tag
+        id: validate-version
         run: |
-          TAG_VERSION="${GITHUB_REF#refs/tags/v}"
-          PYPROJECT_VERSION="${{ steps.get-version.outputs.version }}"
-          if [ "$TAG_VERSION" != "$PYPROJECT_VERSION" ]; then
-            echo "Error: Tag version ($TAG_VERSION) does not match pyproject.toml version ($PYPROJECT_VERSION)"
-            exit 1
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG_VERSION="${GITHUB_REF#refs/tags/v}"
+            PYPROJECT_VERSION="${{ steps.get-version.outputs.version }}"
+            if [ "$TAG_VERSION" != "$PYPROJECT_VERSION" ]; then
+              echo "Error: Tag version ($TAG_VERSION) does not match pyproject.toml version ($PYPROJECT_VERSION)"
+              echo "matched=false" >> $GITHUB_OUTPUT
+              exit 1
+            fi
+            echo "Version check passed: $TAG_VERSION"
+            echo "matched=true" >> $GITHUB_OUTPUT
+          else
+            echo "Not a tag push, skipping version validation"
+            echo "matched=false" >> $GITHUB_OUTPUT
           fi
-          echo "Version check passed: $TAG_VERSION"
 
       - name: Install build tools
         run: |
@@ -106,12 +114,12 @@ jobs:
         run: |
           python -c "import iflow2api_sdk; print('版本:', iflow2api_sdk.__version__); print('导入成功!')"
 
-  # 只有打 tag (v*) 且 TestPyPI 测试通过后才发布到正式 PyPI
+  # 只有 tag 与 pyproject.toml 版本匹配且 TestPyPI 测试通过后才发布到正式 PyPI
   publish-pypi:
     name: Publish to PyPI
     needs: [build, test-from-testpypi]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: needs.build.outputs.version-matched == 'true'
     environment:
       name: pypi
       url: https://pypi.org/project/iflow2api-sdk/
@@ -123,6 +131,11 @@ jobs:
         with:
           name: dist-packages
           path: dist/
+
+      - name: Verify version before publish
+        run: |
+          echo "Publishing version: ${{ needs.build.outputs.version }}"
+          echo "Tag: ${{ github.ref_name }}"
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
