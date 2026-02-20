@@ -31,7 +31,7 @@ from iflow2api_sdk import IFlowClient
 # 创建客户端
 client = IFlowClient(
     api_key="your-api-key",
-    base_url="http://localhost:28000"  # 可选，默认为 http://localhost:28000
+    base_url="https://apis.iflow.cn/v1"  # 可选，默认为 https://apis.iflow.cn/v1
 )
 
 # 列出可用模型
@@ -151,8 +151,8 @@ asyncio.run(main())
 
 **参数：**
 - `api_key` (str): API 密钥
-- `base_url` (str, 可选): API 基础 URL，默认为 `http://localhost:28000`
-- `timeout` (float, 可选): 请求超时时间，默认为 60 秒
+- `base_url` (str, 可选): API 基础 URL，默认为 `https://apis.iflow.cn/v1`
+- `timeout` (float, 可选): 请求超时时间，默认为 300 秒
 - `session_id` (str, 可选): 会话 ID，默认自动生成 UUID
 
 ### AsyncIFlowClient
