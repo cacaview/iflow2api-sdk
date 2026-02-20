@@ -82,6 +82,7 @@ jobs:
         with:
           repository-url: https://test.pypi.org/legacy/
           password: ${{ secrets.TEST_PYPI_API_KEY }}
+          skip-existing: true
 
   # 从 TestPyPI 安装并测试
   test-from-testpypi:
