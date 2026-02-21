@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "iflow2api-sdk"
-version = "0.1.0"
-description = "Python SDK for iflow2api - iFlow CLI AI Service Client"
+version = "0.1.1"
+description = "iflow2api 的 Python SDK - 将 iFlow CLI 的 AI 服务暴露为 OpenAI 兼容 API"
 readme = "README.md"
-license = "MIT"
-requires-python = ">=3.9"
+license = {text = "MIT"}
+requires-python = ">=3.10"
 authors = [
-    { name = "iflow2api-sdk contributors" }
+    {name = "iflow2api", email = "1475429618@qq.com"}
 ]
 keywords = [
     "iflow",
@@ -20,6 +20,8 @@ keywords = [
     "sdk",
     "chat",
     "completions",
+    "chatgpt",
+    "api",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -27,7 +29,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -38,31 +39,31 @@ classifiers = [
 ]
 
 dependencies = [
-    "httpx>=0.25.0",
+    "httpx>=0.28.0",
     "pydantic>=2.0.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.21.0",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
     "pytest-cov>=4.0.0",
     "ruff>=0.1.0",
     "mypy>=1.0.0",
 ]
 
 [project.urls]
-Homepage = "https://github.com/iflow-ai/iflow2api-sdk"
-Documentation = "https://github.com/iflow-ai/iflow2api-sdk#readme"
-Repository = "https://github.com/iflow-ai/iflow2api-sdk"
-Issues = "https://github.com/iflow-ai/iflow2api-sdk/issues"
+Homepage = "https://github.com/cacaview/iflow2api"
+Documentation = "https://github.com/cacaview/iflow2api#readme"
+Repository = "https://github.com/cacaview/iflow2api"
+Issues = "https://github.com/cacaview/iflow2api/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["iflow2api_sdk"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py39"
+target-version = "py310"
 
 [tool.ruff.lint]
 select = [
@@ -80,7 +81,7 @@ ignore = [
 ]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 strict = true
 warn_return_any = true
 warn_unused_ignores = true
