@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "iflow2api-sdk"
-version = "0.1.1"
+version = "0.2.0"
 description = "iflow2api 的 Python SDK - 将 iFlow CLI 的 AI 服务暴露为 OpenAI 兼容 API"
 readme = "README.md"
 license = {text = "MIT"}

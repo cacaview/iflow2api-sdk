@@ -30,7 +30,7 @@ Example:
     ...         print(chunk.content, end="", flush=True)
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 # 客户端
 from .client import IFlowClient
@@ -43,6 +43,7 @@ from .exceptions import (
     ConfigurationError,
     ConnectionError,
     IFlowError,
+    IFlowNotConfiguredError,
     InvalidRequestError,
     ModelNotFoundError,
     RateLimitError,
@@ -85,6 +86,7 @@ __all__ = [
     "AsyncIFlowClient",
     # 异常
     "IFlowError",
+    "IFlowNotConfiguredError",
     "APIError",
     "AuthenticationError",
     "ConfigurationError",

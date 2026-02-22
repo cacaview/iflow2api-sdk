@@ -5,6 +5,7 @@
 
 import os
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Optional
 
 from .auth import AuthConfig
@@ -30,6 +31,7 @@ class ClientConfig:
         max_retries: 最大重试次数
         session_id: 会话 ID（可选）
         conversation_id: 对话 ID（可选）
+        api_key_expires_at: API Key 过期时间（OAuth 模式下与 token 同步）
     """
 
     api_key: str
@@ -39,6 +41,7 @@ class ClientConfig:
     max_retries: int = DEFAULT_MAX_RETRIES
     session_id: Optional[str] = None
     conversation_id: Optional[str] = None
+    api_key_expires_at: Optional[datetime] = None
 
     def __post_init__(self):
         if not self.api_key:
@@ -55,6 +58,18 @@ class ClientConfig:
             conversation_id=self.conversation_id,
         )
 
+    def is_api_key_expired(self) -> bool:
+        """检查 API Key 是否已过期
+
+        Returns:
+            True 如果已过期或即将过期（5分钟内），False 如果未过期或未设置过期时间
+        """
+        if self.api_key_expires_at is None:
+            return False
+        # 提前 5 分钟认为过期，避免临界情况
+        from datetime import timedelta
+        return datetime.now() >= self.api_key_expires_at - timedelta(minutes=5)
+
     @classmethod
     def from_env(cls) -> "ClientConfig":
         """从环境变量创建配置
@@ -65,6 +80,7 @@ class ClientConfig:
             IFLOW_TIMEOUT: 请求超时时间（可选）
             IFLOW_CONNECT_TIMEOUT: 连接超时时间（可选）
             IFLOW_MAX_RETRIES: 最大重试次数（可选）
+            IFLOW_API_KEY_EXPIRES_AT: API Key 过期时间（ISO 格式，可选）
 
         Returns:
             ClientConfig 实例
@@ -78,12 +94,22 @@ class ClientConfig:
                 "API key not found. Set IFLOW_API_KEY environment variable."
             )
 
+        # 解析过期时间
+        expires_at = None
+        expires_at_str = os.environ.get("IFLOW_API_KEY_EXPIRES_AT")
+        if expires_at_str:
+            try:
+                expires_at = datetime.fromisoformat(expires_at_str.replace("Z", "+00:00"))
+            except ValueError:
+                pass  # 忽略无效的日期格式
+
         return cls(
             api_key=api_key,
             base_url=os.environ.get("IFLOW_BASE_URL", DEFAULT_BASE_URL),
             timeout=float(os.environ.get("IFLOW_TIMEOUT", DEFAULT_TIMEOUT)),
             connect_timeout=float(os.environ.get("IFLOW_CONNECT_TIMEOUT", DEFAULT_CONNECT_TIMEOUT)),
             max_retries=int(os.environ.get("IFLOW_MAX_RETRIES", DEFAULT_MAX_RETRIES)),
+            api_key_expires_at=expires_at,
         )
 
 

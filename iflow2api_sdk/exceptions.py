@@ -156,3 +156,14 @@ class ValidationError(IFlowError):
         if self.field:
             return f"Validation error on field '{self.field}': {self.message}"
         return f"Validation error: {self.message}"
+
+
+class IFlowNotConfiguredError(IFlowError):
+    """iFlow 未配置错误
+
+    当 iFlow 服务未配置（缺少 API Key 或未登录）时抛出。
+    服务端会返回 HTTP 503 Service Unavailable。
+    """
+
+    def __init__(self, message: str = "iFlow 未配置，请先完成登录", details: Optional[dict] = None):
+        super().__init__(message, details)

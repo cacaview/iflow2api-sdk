@@ -100,12 +100,22 @@ def _configure_model_request(request_body: dict, model: str) -> dict:
     return body
 
 
-def _normalize_response(result: dict) -> dict:
+def _normalize_response(result: dict, preserve_reasoning: bool = False) -> dict:
     """规范化 OpenAI 格式响应
 
     某些模型（如 GLM-5）使用 reasoning_content 而非 content 返回内容，
     导致 OpenAI 兼容客户端无法读取助手消息。
+
+    Args:
+        result: API 响应数据
+        preserve_reasoning: 是否保留 reasoning_content 字段
+            - False（默认）: 将 reasoning_content 合并到 content，删除 reasoning_content
+            - True: 保留 reasoning_content 字段不变
     """
+    if preserve_reasoning:
+        # 保留 reasoning_content 字段，不做处理
+        return result
+
     choices = result.get("choices", [])
     for choice in choices:
         message = choice.get("message", {})
@@ -207,6 +217,7 @@ class CompletionsAPI:
         model: str,
         messages: list[Union[ChatMessage, dict]],
         stream: Literal[False] = False,
+        preserve_reasoning: bool = False,
         **kwargs,
     ) -> ChatCompletionResponse: ...
 
@@ -217,6 +228,7 @@ class CompletionsAPI:
         model: str,
         messages: list[Union[ChatMessage, dict]],
         stream: Literal[True],
+        preserve_reasoning: bool = False,
         **kwargs,
     ) -> StreamResponse: ...
 
@@ -226,6 +238,7 @@ class CompletionsAPI:
         model: str,
         messages: list[Union[ChatMessage, dict]],
         stream: bool = False,
+        preserve_reasoning: bool = False,
         **kwargs,
     ) -> Union[ChatCompletionResponse, StreamResponse]:
         """创建 Chat Completion
@@ -234,6 +247,9 @@ class CompletionsAPI:
             model: 模型 ID
             messages: 消息列表
             stream: 是否流式响应
+            preserve_reasoning: 是否保留 reasoning_content 字段
+                - False（默认）: 将 reasoning_content 合并到 content
+                - True: 保留 reasoning_content 字段不变
             **kwargs: 其他参数（temperature, max_tokens 等）
 
         Returns:
@@ -278,11 +294,11 @@ class CompletionsAPI:
         request_body = _configure_model_request(request_body, model)
 
         if stream:
-            return self._create_stream(request_body)
+            return self._create_stream(request_body, preserve_reasoning)
         else:
-            return self._create_non_stream(request_body)
+            return self._create_non_stream(request_body, preserve_reasoning)
 
-    def _create_non_stream(self, request_body: dict) -> ChatCompletionResponse:
+    def _create_non_stream(self, request_body: dict, preserve_reasoning: bool = False) -> ChatCompletionResponse:
         """非流式请求"""
         response = self._client._request(
             "POST",
@@ -294,7 +310,7 @@ class CompletionsAPI:
         _check_error_response(response)
 
         # 规范化响应
-        response = _normalize_response(response)
+        response = _normalize_response(response, preserve_reasoning)
 
         # 确保 usage 统计信息存在
         if "usage" not in response:
@@ -306,14 +322,14 @@ class CompletionsAPI:
 
         return ChatCompletionResponse(**response)
 
-    def _create_stream(self, request_body: dict) -> StreamResponse:
+    def _create_stream(self, request_body: dict, preserve_reasoning: bool = False) -> StreamResponse:
         """流式请求"""
         response_iter = self._client._request_stream(
             "POST",
             "/chat/completions",
             json=request_body,
         )
-        return StreamResponse(response_iter)
+        return StreamResponse(response_iter, preserve_reasoning=preserve_reasoning)
 
 
 class ChatAPI:
@@ -337,6 +353,7 @@ class AsyncCompletionsAPI:
         model: str,
         messages: list[Union[ChatMessage, dict]],
         stream: Literal[False] = False,
+        preserve_reasoning: bool = False,
         **kwargs,
     ) -> ChatCompletionResponse: ...
 
@@ -347,6 +364,7 @@ class AsyncCompletionsAPI:
         model: str,
         messages: list[Union[ChatMessage, dict]],
         stream: Literal[True],
+        preserve_reasoning: bool = False,
         **kwargs,
     ) -> AsyncStreamResponse: ...
 
@@ -356,6 +374,7 @@ class AsyncCompletionsAPI:
         model: str,
         messages: list[Union[ChatMessage, dict]],
         stream: bool = False,
+        preserve_reasoning: bool = False,
         **kwargs,
     ) -> Union[ChatCompletionResponse, AsyncStreamResponse]:
         """创建 Chat Completion（异步）
@@ -364,6 +383,9 @@ class AsyncCompletionsAPI:
             model: 模型 ID
             messages: 消息列表
             stream: 是否流式响应
+            preserve_reasoning: 是否保留 reasoning_content 字段
+                - False（默认）: 将 reasoning_content 合并到 content
+                - True: 保留 reasoning_content 字段不变
             **kwargs: 其他参数
 
         Returns:
@@ -389,11 +411,11 @@ class AsyncCompletionsAPI:
         request_body = _configure_model_request(request_body, model)
 
         if stream:
-            return await self._create_stream(request_body)
+            return await self._create_stream(request_body, preserve_reasoning)
         else:
-            return await self._create_non_stream(request_body)
+            return await self._create_non_stream(request_body, preserve_reasoning)
 
-    async def _create_non_stream(self, request_body: dict) -> ChatCompletionResponse:
+    async def _create_non_stream(self, request_body: dict, preserve_reasoning: bool = False) -> ChatCompletionResponse:
         """非流式请求（异步）"""
         response = await self._client._request(
             "POST",
@@ -404,7 +426,7 @@ class AsyncCompletionsAPI:
         # 检测错误响应
         _check_error_response(response)
 
-        response = _normalize_response(response)
+        response = _normalize_response(response, preserve_reasoning)
 
         if "usage" not in response:
             response["usage"] = {
@@ -415,7 +437,7 @@ class AsyncCompletionsAPI:
 
         return ChatCompletionResponse(**response)
 
-    async def _create_stream(self, request_body: dict) -> AsyncStreamResponse:
+    async def _create_stream(self, request_body: dict, preserve_reasoning: bool = False) -> AsyncStreamResponse:
         """流式请求（异步）"""
         # 注意：_request_stream 是异步生成器，不能 await
         response_iter = self._client._request_stream(
@@ -423,7 +445,7 @@ class AsyncCompletionsAPI:
             "/chat/completions",
             json=request_body,
         )
-        return AsyncStreamResponse(response_iter)
+        return AsyncStreamResponse(response_iter, preserve_reasoning=preserve_reasoning)
 
 
 class AsyncChatAPI:

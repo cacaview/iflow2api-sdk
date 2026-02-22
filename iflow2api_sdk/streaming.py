@@ -16,8 +16,9 @@ class StreamChunk:
     封装单个流式响应块，提供便捷的属性访问。
     """
 
-    def __init__(self, raw_data: dict):
+    def __init__(self, raw_data: dict, preserve_reasoning: bool = False):
         self._raw_data = raw_data
+        self._preserve_reasoning = preserve_reasoning
         self._chunk: Optional[ChatCompletionStreamChunk] = None
 
     @property
@@ -47,11 +48,23 @@ class StreamChunk:
 
     @property
     def content(self) -> Optional[str]:
-        """Delta 内容"""
+        """Delta 内容
+
+        当 preserve_reasoning=False 时，如果 content 为空但 reasoning_content 有值，
+        则返回 reasoning_content 的值（合并模式）。
+        """
         choices = self._raw_data.get("choices", [])
         if choices:
             delta = choices[0].get("delta", {})
-            return delta.get("content")
+            content = delta.get("content")
+            reasoning_content = delta.get("reasoning_content")
+            
+            if not self._preserve_reasoning:
+                # 兼容模式：优先返回 content，如果为空则返回 reasoning_content
+                return content or reasoning_content
+            else:
+                # 保留模式：只返回 content
+                return content
         return None
 
     @property
@@ -94,10 +107,11 @@ class StreamResponse:
         ...         print(chunk.content, end="", flush=True)
     """
 
-    def __init__(self, response_iter: Iterator[bytes]):
+    def __init__(self, response_iter: Iterator[bytes], preserve_reasoning: bool = False):
         self._iter = response_iter
         self._buffer = ""
         self._chunk_count = 0
+        self._preserve_reasoning = preserve_reasoning
 
     def _parse_sse_line(self, line: str) -> Optional[StreamChunk]:
         """解析 SSE 数据行
@@ -123,7 +137,7 @@ class StreamResponse:
             try:
                 data = json.loads(data_str)
                 self._chunk_count += 1
-                return StreamChunk(data)
+                return StreamChunk(data, preserve_reasoning=self._preserve_reasoning)
             except json.JSONDecodeError as e:
                 raise StreamError(f"Failed to parse SSE data: {e}", details={"line": line})
 
@@ -188,10 +202,11 @@ class AsyncStreamResponse:
     封装异步 SSE 流式响应。
     """
 
-    def __init__(self, response_aiter):
+    def __init__(self, response_aiter, preserve_reasoning: bool = False):
         self._aiter = response_aiter
         self._buffer = ""
         self._chunk_count = 0
+        self._preserve_reasoning = preserve_reasoning
 
     def _parse_sse_line(self, line: str) -> Optional[StreamChunk]:
         """解析 SSE 数据行"""
@@ -208,7 +223,7 @@ class AsyncStreamResponse:
             try:
                 data = json.loads(data_str)
                 self._chunk_count += 1
-                return StreamChunk(data)
+                return StreamChunk(data, preserve_reasoning=self._preserve_reasoning)
             except json.JSONDecodeError as e:
                 raise StreamError(f"Failed to parse SSE data: {e}", details={"line": line})
 
